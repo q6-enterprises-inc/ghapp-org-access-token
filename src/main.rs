@@ -3,10 +3,22 @@ use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, D
 use chrono::Utc;
 use std::fs;
 
-use ghapp_org_access_token::config::Config;
+use clap::{Parser, Subcommand};
+
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    /// Github app id.
+    #[clap(short, long)]
+    app_id: String,
+
+    /// Relative path to the Github App private key.
+    #[clap(short, long)]
+    private_key_path: String,
+}
 
 fn main() {
-    let config = Config::new().unwrap();
+    let args = Args::parse();
 
     /// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
     #[derive(Debug, Serialize, Deserialize)]
@@ -29,12 +41,12 @@ fn main() {
     let claims = Claims {
             iat: issued.timestamp() as usize,
             exp: expiration as usize,
-            iss: config.app_id.to_string(),
+            iss: args.app_id.to_string(),
     };
 
-    let private_key = fs::read(config.private_key_path).unwrap();
+    let private_key = fs::read(args.private_key_path).unwrap();
 
     let token = encode(&Header::new(Algorithm::RS256), &claims, &EncodingKey::from_rsa_pem(&private_key).unwrap()).unwrap();
 
-    println!("{:?}", token);
+    println!("{}", token);
 }
