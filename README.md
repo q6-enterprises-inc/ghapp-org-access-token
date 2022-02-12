@@ -3,7 +3,7 @@
 The next step will be to incorporate this into a github action.
 
 ## Install
-- Follow these instructions to setup an org level bot: https://github.com/q6-enterprises-inc/ghapp_org_access_token.git.
+- Follow these instructions to setup an org level bot: https://docs.github.com/en/developers/overview/managing-deploy-keys#server-to-server-tokens.
 - Be sure you grant the bot the appropriate permissions.
 - Record your bot's app id.
 - Generate a private key for the app and download the key.
