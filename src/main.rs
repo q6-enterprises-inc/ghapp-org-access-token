@@ -4,8 +4,26 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
+use reqwest;
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
+pub trait HttpSend {
+    fn get(token: &str) -> Result<String, reqwest::Error> {
+        let client = reqwest::blocking::Client::new();
+
+        let res = client
+            .get(format!(
+                "https://api.github.com/orgs/{}/installation",
+                "q6-enterprises-inc"
+            ))
+            .header("Authorization", format!("Bearer {}", token))
+            .header("User-Agent", APP_USER_AGENT)
+            .send()?;
+        let data = res.text()?;
+        Ok(data)
+    }
+}
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -36,6 +54,8 @@ struct GhInstallationResponse {
     id: u32,
     access_tokens_url: String,
 }
+
+impl HttpSend for GhInstallationResponse {}
 
 #[derive(Debug, Deserialize, Serialize)]
 struct GhAccessTokenResponse {
@@ -78,20 +98,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .unwrap();
 
-    let client = reqwest::blocking::Client::new();
 
-    let res = client
-        .get(format!(
-            "https://api.github.com/orgs/{}/installation",
-            args.org
-        ))
-        .header("Authorization", format!("Bearer {}", token))
-        .header("User-Agent", APP_USER_AGENT)
-        .send()?
-        .text()?;
+    /*impl HttpSend for GhInstallationResponse {
+        fn get(token: &str) -> Result<String, reqwest::Error> {
+            Ok(r#"{"id": 3333333, "access_tokens_url": "https://www.not-a-url.io"}"#.to_string())
+        }
+    }*/
+
+    let res = GhInstallationResponse::get(&token)?;
 
     let gh_installation_response: GhInstallationResponse = serde_json::from_str(&res)?;
     let access_token_url = &gh_installation_response.access_tokens_url;
+
+    let client = reqwest::blocking::Client::new();
 
     let res = client
         .post(access_token_url)
