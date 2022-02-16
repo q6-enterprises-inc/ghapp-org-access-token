@@ -18,7 +18,6 @@ struct Args {
     org: String,
 }
 
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
