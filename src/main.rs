@@ -1,6 +1,6 @@
-use clap::Parser;
-use ghapp_org_access_token::httpsend::{HttpSend, run};
 use anyhow::Result;
+use clap::Parser;
+use ghapp_org_access_token::httpsend::{run, HttpSend};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

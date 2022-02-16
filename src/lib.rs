@@ -1,10 +1,10 @@
 pub mod httpsend {
-    use reqwest;
+    use anyhow::{Context, Result};
     use chrono::Utc;
     use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
+    use reqwest;
     use serde::{Deserialize, Serialize};
     use std::fs;
-    use anyhow::{Result, Context};
 
     static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
@@ -17,7 +17,10 @@ pub mod httpsend {
     }
 
     pub trait HttpSend {
-        fn generate_token(app_id: String, private_key_path: String) -> Result<String, Box<dyn std::error::Error>> {
+        fn generate_token(
+            app_id: String,
+            private_key_path: String,
+        ) -> Result<String, Box<dyn std::error::Error>> {
             let issued = Utc::now()
                 .checked_add_signed(chrono::Duration::seconds(-10))
                 .expect("valid timestamp");
@@ -48,10 +51,7 @@ pub mod httpsend {
             let client = reqwest::blocking::Client::new();
 
             let res = client
-                .get(format!(
-                    "https://api.github.com/orgs/{}/installation",
-                    org
-                ))
+                .get(format!("https://api.github.com/orgs/{}/installation", org))
                 .header("Authorization", format!("Bearer {}", token))
                 .header("User-Agent", APP_USER_AGENT)
                 .send()?;
@@ -73,8 +73,14 @@ pub mod httpsend {
         }
     }
 
-    pub fn run<T>(_t: T, app_id: String, private_key_path: String, org: String) -> Result<String, Box<dyn std::error::Error>>
-        where T: HttpSend
+    pub fn run<T>(
+        _t: T,
+        app_id: String,
+        private_key_path: String,
+        org: String,
+    ) -> Result<String, Box<dyn std::error::Error>>
+    where
+        T: HttpSend,
     {
         #[derive(Debug, Deserialize, Serialize)]
         struct GhInstallationResponse {
@@ -100,13 +106,20 @@ pub mod httpsend {
 
         let res = T::get_installation_id(&token, org)?;
 
-        let gh_installation_response: GhInstallationResponse = serde_json::from_str(&res).with_context(|| format!("received response: {}", res))?;
+        let gh_installation_response: GhInstallationResponse =
+            serde_json::from_str(&res).with_context(|| format!("received response: {}", res))?;
 
         let access_token_url = &gh_installation_response.access_tokens_url;
 
         let res = T::get_access_token(access_token_url, &token).with_context(|| "used url")?;
 
-        let gh_access_token_response: GhAccessTokenResponse = serde_json::from_str(&res).with_context(|| format!("could not convert json to GhAccessTokenResponse, recieved: {}", res))?;
+        let gh_access_token_response: GhAccessTokenResponse = serde_json::from_str(&res)
+            .with_context(|| {
+                format!(
+                    "could not convert json to GhAccessTokenResponse, recieved: {}",
+                    res
+                )
+            })?;
 
         let output = FinalOutput {
             access_token: gh_access_token_response.token,
@@ -121,14 +134,17 @@ pub mod httpsend {
 
 #[cfg(test)]
 mod test {
-    use crate::httpsend::{HttpSend, run};
+    use crate::httpsend::{run, HttpSend};
 
     #[test]
     fn run_test() {
         struct MockHttpSend;
 
         impl HttpSend for MockHttpSend {
-            fn generate_token(_app_id: String, _private_key_path: String) -> Result<String, Box<dyn std::error::Error>> {
+            fn generate_token(
+                _app_id: String,
+                _private_key_path: String,
+            ) -> Result<String, Box<dyn std::error::Error>> {
                 Ok("token".to_string())
             }
 
@@ -136,8 +152,14 @@ mod test {
                 Ok(r#"{"id": 2342234, "access_tokens_url": "test url"}"#.to_string())
             }
 
-            fn get_access_token(_access_token_url: &str, _token: &str) -> Result<String, reqwest::Error> {
-                Ok(r#"{"token": "access token", "expires_at": "2022-02-16T21:34:13Z"}"#.to_string())
+            fn get_access_token(
+                _access_token_url: &str,
+                _token: &str,
+            ) -> Result<String, reqwest::Error> {
+                Ok(
+                    r#"{"token": "access token", "expires_at": "2022-02-16T21:34:13Z"}"#
+                        .to_string(),
+                )
             }
         }
 
