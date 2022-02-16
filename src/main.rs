@@ -1,29 +1,6 @@
-use chrono::Utc;
 use clap::Parser;
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
-use serde::{Deserialize, Serialize};
-use serde_json;
-use std::fs;
-use reqwest;
-
-static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
-
-pub trait HttpSend {
-    fn get(token: &str) -> Result<String, reqwest::Error> {
-        let client = reqwest::blocking::Client::new();
-
-        let res = client
-            .get(format!(
-                "https://api.github.com/orgs/{}/installation",
-                "q6-enterprises-inc"
-            ))
-            .header("Authorization", format!("Bearer {}", token))
-            .header("User-Agent", APP_USER_AGENT)
-            .send()?;
-        let data = res.text()?;
-        Ok(data)
-    }
-}
+use ghapp_org_access_token::httpsend::{HttpSend, run};
+use anyhow::Result;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -41,94 +18,17 @@ struct Args {
     org: String,
 }
 
-/// Our claims struct, it needs to derive `Serialize` and/or `Deserialize`
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    iat: usize,
-    exp: usize,
-    iss: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct GhInstallationResponse {
-    id: u32,
-    access_tokens_url: String,
-}
-
-impl HttpSend for GhInstallationResponse {}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct GhAccessTokenResponse {
-    token: String,
-    expires_at: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct FinalOutput {
-    access_token: String,
-    expiration: String,
-    access_token_url: String,
-    installation_id: u32,
-}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let issued = Utc::now()
-        .checked_add_signed(chrono::Duration::seconds(-10))
-        .expect("valid timestamp");
+    struct Output;
 
-    let expiration = issued
-        .checked_add_signed(chrono::Duration::minutes(10))
-        .expect("valid timestamp")
-        .timestamp();
+    impl HttpSend for Output {}
 
-    let claims = Claims {
-        iat: issued.timestamp() as usize,
-        exp: expiration as usize,
-        iss: args.app_id.to_string(),
-    };
+    let result = run(Output, args.app_id, args.private_key_path, args.org)?;
 
-    let private_key = fs::read(args.private_key_path).unwrap();
-
-    let token = encode(
-        &Header::new(Algorithm::RS256),
-        &claims,
-        &EncodingKey::from_rsa_pem(&private_key).unwrap(),
-    )
-    .unwrap();
-
-
-    /*impl HttpSend for GhInstallationResponse {
-        fn get(token: &str) -> Result<String, reqwest::Error> {
-            Ok(r#"{"id": 3333333, "access_tokens_url": "https://www.not-a-url.io"}"#.to_string())
-        }
-    }*/
-
-    let res = GhInstallationResponse::get(&token)?;
-
-    let gh_installation_response: GhInstallationResponse = serde_json::from_str(&res)?;
-    let access_token_url = &gh_installation_response.access_tokens_url;
-
-    let client = reqwest::blocking::Client::new();
-
-    let res = client
-        .post(access_token_url)
-        .header("Authorization", format!("Bearer {}", token))
-        .header("User-Agent", APP_USER_AGENT)
-        .send()?
-        .text()?;
-
-    let gh_access_token_response: GhAccessTokenResponse = serde_json::from_str(&res)?;
-
-    let output = FinalOutput {
-        access_token: gh_access_token_response.token,
-        expiration: gh_access_token_response.expires_at,
-        access_token_url: gh_installation_response.access_tokens_url.to_string(),
-        installation_id: gh_installation_response.id,
-    };
-
-    println!("{}", serde_json::to_string(&output)?);
+    println!("{}", result);
 
     Ok(())
 }
