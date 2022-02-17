@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use ghapp_org_access_token::httpsend::{run, HttpSend};
+use chrono::Utc;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -16,6 +17,14 @@ struct Args {
     /// Organization name as it appears in the github url, i.e. https://github.com/my-org/my-repo.
     #[clap(short, long)]
     org: String,
+
+    /// Github API fully qualified base url. Remember to include 'http://'!
+    #[clap(short, long, default_value="https://api.github.com")]
+    base_url: String,
+
+    /// Epoch time in seconds, defaults to current Epoch.
+    #[clap(short, long, default_value_t=Utc::now().checked_add_signed(chrono::Duration::seconds(-10)).expect("valid timestamp").timestamp())]
+    issue_time: i64,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     impl HttpSend for Output {}
 
-    let result = run(Output, args.app_id, args.private_key_path, args.org)?;
+    let result = run(Output, &args.app_id, &args.private_key_path, &args.org, &args.base_url, args.issue_time)?;
 
     println!("{}", result);
 

@@ -1,6 +1,6 @@
 pub mod httpsend {
     use anyhow::{Context, Result};
-    use chrono::Utc;
+    use chrono::{Utc, TimeZone};
     use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
     use reqwest;
     use serde::{Deserialize, Serialize};
@@ -18,20 +18,18 @@ pub mod httpsend {
 
     pub trait HttpSend {
         fn generate_token(
-            app_id: String,
-            private_key_path: String,
+            app_id: &str,
+            private_key_path: &str,
+            issue_time: i64,
         ) -> Result<String, Box<dyn std::error::Error>> {
-            let issued = Utc::now()
-                .checked_add_signed(chrono::Duration::seconds(-10))
-                .expect("valid timestamp");
 
-            let expiration = issued
+            let expiration = Utc.timestamp(issue_time, 0)
                 .checked_add_signed(chrono::Duration::minutes(10))
                 .expect("valid timestamp")
                 .timestamp();
 
             let claims = Claims {
-                iat: issued.timestamp() as usize,
+                iat: issue_time as usize,
                 exp: expiration as usize,
                 iss: app_id.to_string(),
             };
@@ -47,11 +45,11 @@ pub mod httpsend {
             Ok(token)
         }
 
-        fn get_installation_id(token: &str, org: String) -> Result<String, reqwest::Error> {
+        fn get_installation_id(token: &str, org: &str, base_url: &str) -> Result<String, reqwest::Error> {
             let client = reqwest::blocking::Client::new();
 
             let res = client
-                .get(format!("https://api.github.com/orgs/{}/installation", org))
+                .get(format!("{}/orgs/{}/installation", base_url, org))
                 .header("Authorization", format!("Bearer {}", token))
                 .header("User-Agent", APP_USER_AGENT)
                 .send()?;
@@ -75,9 +73,11 @@ pub mod httpsend {
 
     pub fn run<T>(
         _t: T,
-        app_id: String,
-        private_key_path: String,
-        org: String,
+        app_id: &str,
+        private_key_path: &str,
+        org: &str,
+        base_url: &str,
+        issue_time: i64,
     ) -> Result<String, Box<dyn std::error::Error>>
     where
         T: HttpSend,
@@ -102,16 +102,16 @@ pub mod httpsend {
             installation_id: u32,
         }
 
-        let token = T::generate_token(app_id, private_key_path)?;
+        let token = T::generate_token(&app_id, &private_key_path, issue_time)?;
 
-        let res = T::get_installation_id(&token, org)?;
+        let res = T::get_installation_id(&token, &org, &base_url)?;
 
         let gh_installation_response: GhInstallationResponse =
             serde_json::from_str(&res).with_context(|| format!("received response: {}", res))?;
 
         let access_token_url = &gh_installation_response.access_tokens_url;
 
-        let res = T::get_access_token(access_token_url, &token).with_context(|| "used url")?;
+        let res = T::get_access_token(&access_token_url, &token).with_context(|| "used url")?;
 
         let gh_access_token_response: GhAccessTokenResponse = serde_json::from_str(&res)
             .with_context(|| {
@@ -135,6 +135,7 @@ pub mod httpsend {
 #[cfg(test)]
 mod test {
     use crate::httpsend::{run, HttpSend};
+    use serde_json::json;
 
     #[test]
     fn run_test() {
@@ -142,13 +143,14 @@ mod test {
 
         impl HttpSend for MockHttpSend {
             fn generate_token(
-                _app_id: String,
-                _private_key_path: String,
+                _app_id: &str,
+                _private_key_path: &str,
+                _issue_time: i64,
             ) -> Result<String, Box<dyn std::error::Error>> {
                 Ok("token".to_string())
             }
 
-            fn get_installation_id(_token: &str, _org: String) -> Result<String, reqwest::Error> {
+            fn get_installation_id(_token: &str, _org: &str, _base_url: &str) -> Result<String, reqwest::Error> {
                 Ok(r#"{"id": 2342234, "access_tokens_url": "test url"}"#.to_string())
             }
 
@@ -163,14 +165,23 @@ mod test {
             }
         }
 
-        let app_id = "234233".to_string();
-        let private_key_path = "test path".to_string();
-        let org = "org".to_string();
+        let app_id = "234233";
+        let private_key_path = "test path";
+        let org = "org";
+        let base_url = "https://api.github.com";
+        let issue_time = 1645121374;
 
-        let result = run(MockHttpSend, app_id, private_key_path, org);
+        let expected_result: serde_json::Value = json!({
+            "access_token": "access token",
+            "expiration": "2022-02-16T21:34:13Z",
+            "access_token_url": "test url",
+            "installation_id": 2342234
+        });
+
+        let result = run(MockHttpSend, app_id, private_key_path, org, base_url, issue_time);
 
         match result {
-            Ok(_) => (),
+            Ok(d) => assert_eq!(serde_json::from_str::<serde_json::Value>(&d).unwrap(), expected_result),
             err => panic!("should have been Ok, got {:#?}", err),
         };
     }
