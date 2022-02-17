@@ -47,7 +47,7 @@ OPTIONS:
             Print version information
 ```
 ## Output
-If you have correctly created the app for your organization, the `ghapp_org_access_token` will output something like this:
+If you have correctly created the app for your organization, `ghapp_org_access_token` will output something like this:
 ```
 {
   "access_token": "ghs_1aaLvxCh12343uL23hvVmjJlXaij1c7yHM3Q",
