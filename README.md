@@ -17,15 +17,24 @@ ghapp_org_access_token --help
 ```
 ## Usage
 ```
+ghapp_org_access_token 0.1.0
+
 USAGE:
-    ghapp_org_access_token --app-id <APP_ID> --private-key-path <PRIVATE_KEY_PATH> --org <ORG>
+    ghapp_org_access_token [OPTIONS] --app-id <APP_ID> --private-key-path <PRIVATE_KEY_PATH> --org <ORG>
 
 OPTIONS:
     -a, --app-id <APP_ID>
             Github app id
 
+    -b, --base-url <BASE_URL>
+            Github API fully qualified base url. Remember to include 'http://'! [default:
+            https://api.github.com]
+
     -h, --help
             Print help information
+
+    -i, --issue-time <ISSUE_TIME>
+            Epoch time in seconds, defaults to current Epoch [default: 1645126270]
 
     -o, --org <ORG>
             Organization name as it appears in the github url, i.e. https://github.com/my-org/my-
