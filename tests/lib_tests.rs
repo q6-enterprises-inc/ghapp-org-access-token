@@ -1,8 +1,8 @@
 use assert_cmd::Command;
-use wiremock::matchers::{method, path, header};
-use wiremock::{Mock, MockServer, ResponseTemplate};
-use tokio;
 use serde_json::json;
+use tokio;
+use wiremock::matchers::{header, method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
 
 #[tokio::test]
 async fn it_works_test() {
@@ -41,14 +41,20 @@ async fn it_works_test() {
         .await;
 
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.args(
-        &[
-            "--app-id", "1234343",
-            "--private-key-path", "tests/data/privkey-fake.pem",
-            "--org", "test-inc",
-            "--base-url", &mock_server.uri(),
-            "--issue-time", "1645121374",
-        ]).assert();
+    let assert = cmd
+        .args(&[
+            "--app-id",
+            "1234343",
+            "--private-key-path",
+            "tests/data/privkey-fake.pem",
+            "--org",
+            "test-inc",
+            "--base-url",
+            &mock_server.uri(),
+            "--issue-time",
+            "1645121374",
+        ])
+        .assert();
 
     assert.success();
 }
