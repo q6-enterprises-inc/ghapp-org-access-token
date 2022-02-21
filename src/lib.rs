@@ -1,10 +1,10 @@
 pub mod httpsend {
     use anyhow::{Context, Result};
+    use base64::decode;
     use chrono::{TimeZone, Utc};
     use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
     use reqwest;
     use serde::{Deserialize, Serialize};
-    use base64::decode;
 
     static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
@@ -30,7 +30,9 @@ pub mod httpsend {
                 iss: app_id.to_string(),
             };
 
-            let private_key = decode(private_key)?;
+            let private_key = decode(private_key).with_context(|| {
+                "could not decode app private key - private key needs to be base64 encoded"
+            })?;
 
             let token = encode(
                 &Header::new(Algorithm::RS256),
@@ -187,14 +189,7 @@ mod test {
             "installation_id": 2342234
         });
 
-        let result = run(
-            MockHttpSend,
-            app_id,
-            private_key,
-            org,
-            base_url,
-            issue_time,
-        );
+        let result = run(MockHttpSend, app_id, private_key, org, base_url, issue_time);
 
         match result {
             Ok(d) => assert_eq!(
