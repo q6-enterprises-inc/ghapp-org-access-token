@@ -4,7 +4,7 @@ pub mod httpsend {
     use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
     use reqwest;
     use serde::{Deserialize, Serialize};
-    use std::fs;
+    use base64::decode;
 
     static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
@@ -17,7 +17,7 @@ pub mod httpsend {
     }
 
     pub trait HttpSend {
-        fn generate_token(app_id: &str, private_key_path: &str, issue_time: i64) -> Result<String> {
+        fn generate_token(app_id: &str, private_key: &str, issue_time: i64) -> Result<String> {
             let expiration = Utc
                 .timestamp(issue_time, 0)
                 .checked_add_signed(chrono::Duration::minutes(10))
@@ -30,13 +30,13 @@ pub mod httpsend {
                 iss: app_id.to_string(),
             };
 
-            let private_key = fs::read(private_key_path)?;
+            let private_key = decode(private_key)?;
 
             let token = encode(
                 &Header::new(Algorithm::RS256),
                 &claims,
                 &EncodingKey::from_rsa_pem(&private_key).with_context(|| {
-                    "could encode jwt into rsa256 format - are you sure your key is in pem format?"
+                    "could not encode jwt into rsa256 format - are you sure your key is in pem format?"
                 })?,
             )?;
 
@@ -73,7 +73,7 @@ pub mod httpsend {
     pub fn run<T>(
         _t: T,
         app_id: &str,
-        private_key_path: &str,
+        private_key: &str,
         org: &str,
         base_url: &str,
         issue_time: i64,
@@ -101,7 +101,7 @@ pub mod httpsend {
             installation_id: u32,
         }
 
-        let token = T::generate_token(&app_id, &private_key_path, issue_time)
+        let token = T::generate_token(&app_id, &private_key, issue_time)
             .with_context(|| "could not generate jwt")?;
 
         let res = T::get_installation_id(&token, &org, &base_url)
@@ -156,7 +156,7 @@ mod test {
         impl HttpSend for MockHttpSend {
             fn generate_token(
                 _app_id: &str,
-                _private_key_path: &str,
+                _private_key: &str,
                 _issue_time: i64,
             ) -> Result<String> {
                 Ok("token".to_string())
@@ -175,7 +175,7 @@ mod test {
         }
 
         let app_id = "234233";
-        let private_key_path = "test path";
+        let private_key = "base64 encoded key";
         let org = "org";
         let base_url = "https://api.github.com";
         let issue_time = 1645121374;
@@ -190,7 +190,7 @@ mod test {
         let result = run(
             MockHttpSend,
             app_id,
-            private_key_path,
+            private_key,
             org,
             base_url,
             issue_time,

@@ -10,9 +10,9 @@ struct Args {
     #[clap(short, long)]
     app_id: String,
 
-    /// Relative path to the Github App private key.
+    /// Base64 encoded Github App private key.
     #[clap(short, long)]
-    private_key_path: String,
+    private_key: String,
 
     /// Organization name as it appears in the github url, i.e. https://github.com/my-org/my-repo.
     #[clap(short, long)]
@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result = run(
         Output,
         &args.app_id,
-        &args.private_key_path,
+        &args.private_key,
         &args.org,
         &args.base_url,
         args.issue_time,
