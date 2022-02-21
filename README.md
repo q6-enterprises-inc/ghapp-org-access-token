@@ -6,7 +6,8 @@ The next step will be to incorporate this into a github action.
 - Follow these instructions to setup an org level bot: https://docs.github.com/en/developers/overview/managing-deploy-keys#server-to-server-tokens.
 - Be sure you grant the bot the appropriate permissions.
 - Record your bot's app id.
-- Generate a private key for the app and download the key.
+- Generate a private key for the app and download the pem formatted key.
+- convert the private key to a base64 encoded string, no line breaks. For example `base64 -w 0 <filename.pem>`
 - Be sure that you have Rust and Cargo installed.
 - Install the app:
 ```
@@ -20,31 +21,19 @@ ghapp_org_access_token --help
 ghapp_org_access_token 0.1.0
 
 USAGE:
-    ghapp_org_access_token [OPTIONS] --app-id <APP_ID> --private-key-path <PRIVATE_KEY_PATH> --org <ORG>
+    ghapp_org_access_token [OPTIONS] --app-id <APP_ID> --private-key <PRIVATE_KEY> --org <ORG>
 
 OPTIONS:
-    -a, --app-id <APP_ID>
-            Github app id
-
-    -b, --base-url <BASE_URL>
-            Github API fully qualified base url. Remember to include 'http://'! [default:
-            https://api.github.com]
-
-    -h, --help
-            Print help information
-
-    -i, --issue-time <ISSUE_TIME>
-            Epoch time in seconds, defaults to current Epoch [default: 1645126270]
-
-    -o, --org <ORG>
-            Organization name as it appears in the github url, i.e. https://github.com/my-org/my-
-            repo
-
-    -p, --private-key-path <PRIVATE_KEY_PATH>
-            Relative path to the Github App private key
-
-    -V, --version
-            Print version information
+    -a, --app-id <APP_ID>              Github app id
+    -b, --base-url <BASE_URL>          Github API fully qualified base url. Remember to include
+                                       'http://'! [default: https://api.github.com]
+    -h, --help                         Print help information
+    -i, --issue-time <ISSUE_TIME>      Epoch time in seconds, defaults to current Epoch [default:
+                                       1645457200]
+    -o, --org <ORG>                    Organization name as it appears in the github url, i.e.
+                                       https://github.com/my-org/my-repo
+    -p, --private-key <PRIVATE_KEY>    Base64 encoded Github App private key
+    -V, --version                      Print version information
 ```
 ## Output
 If you have correctly created the app for your organization, `ghapp_org_access_token` will output something like this:
