@@ -103,11 +103,11 @@ pub mod httpsend {
             installation_id: u32,
         }
 
-        let token = T::generate_token(&app_id, &private_key, issue_time)
+        let token = T::generate_token(app_id, private_key, issue_time)
             .with_context(|| "could not generate jwt")?;
 
-        let res = T::get_installation_id(&token, &org, &base_url)
-            .with_context(|| format!("could not retrieve installion id from github"))?;
+        let res = T::get_installation_id(&token, org, base_url)
+            .with_context(|| "could not retrieve installion id from github".to_string())?;
 
         let gh_installation_response: GhInstallationResponse = serde_json::from_str(&res)
             .with_context(|| {
@@ -119,7 +119,7 @@ pub mod httpsend {
 
         let access_token_url = &gh_installation_response.access_tokens_url;
 
-        let res = T::get_access_token(&access_token_url, &token).with_context(|| {
+        let res = T::get_access_token(access_token_url, &token).with_context(|| {
             format!(
                 "could not get access token - used access token url: {}",
                 &access_token_url
