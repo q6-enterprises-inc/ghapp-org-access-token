@@ -1,5 +1,5 @@
-# ghapp_org_access_token
-`ghapp_org_access_token` gets an access token for an org level bot. The access token is then intended to be used with CI/CD to clone private dependencies. 
+# ghapp-org-access-token
+`ghapp-org-access-token` gets an access token for an org level bot. The access token is then intended to be used with CI/CD to clone private dependencies.
 The next step will be to incorporate this into a github action.
 
 ## Install
@@ -11,17 +11,17 @@ The next step will be to incorporate this into a github action.
 - Be sure that you have Rust and Cargo installed.
 - Install the app:
 ```
-git clone https://github.com/q6-enterprises-inc/ghapp_org_access_token.git &&\
-cd ghapp_org_access_token &&\
+git clone https://github.com/q6-enterprises-inc/ghapp-org-access-token.git &&\
+cd ghapp-org-access-token &&\
 cargo install --path . &&\
-ghapp_org_access_token --help
+ghapp-org-access-token --help
 ```
 ## Usage
 ```
-ghapp_org_access_token 0.1.0
+ghapp-org-access-token 0.1.0
 
 USAGE:
-    ghapp_org_access_token [OPTIONS] --app-id <APP_ID> --private-key <PRIVATE_KEY> --org <ORG>
+    ghapp-org-access-token [OPTIONS] --app-id <APP_ID> --private-key <PRIVATE_KEY> --org <ORG>
 
 OPTIONS:
     -a, --app-id <APP_ID>              Github app id
@@ -36,7 +36,7 @@ OPTIONS:
     -V, --version                      Print version information
 ```
 ## Output
-If you have correctly created the app for your organization, `ghapp_org_access_token` will output something like this:
+If you have correctly created the app for your organization, `ghapp-org-access-token` will output something like this:
 ```
 {
   "access_token": "ghs_1aaLvxCh12343uL23hvVmjJlXaij1c7yHM3Q",
